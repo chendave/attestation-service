@@ -15,10 +15,11 @@ required-features = [ "rvps-native", "rvps-grpc", "tokio/rt-multi-thread" ]
 
 [features]
 default = [ "rvps-native", "in-toto", "all-verifier" ]
-all-verifier = [ "az-snp-vtpm-verifier", "tdx-verifier", "sgx-verifier" ]
+all-verifier = [ "az-snp-vtpm-verifier", "tdx-verifier", "sgx-verifier", "cca-verifier" ]
 tdx-verifier = [ "eventlog-rs", "scroll", "intel-tee-quote-verification-rs" ]
 sgx-verifier = [ "scroll", "intel-tee-quote-verification-rs" ]
 az-snp-vtpm-verifier = [ "az-snp-vtpm", "sev" ]
+cca-verifier = [ ]
 
 rvps-native = []
 rvps-grpc = [ "tonic" ]
@@ -42,7 +43,7 @@ hex = "0.4.3"
 # TODO: Replace this with crate.io published version
 in-toto = { git = "https://github.com/Xynnn007/in-toto-rs.git", rev = "7f69799", optional = true }
 intel-tee-quote-verification-rs = { version = "0.2.1", optional = true }
-kbs-types = { git = "https://github.com/mkulke/kbs-types.git", branch = "mkulke/add-az-snp-vtpm-tee-on-v0.2" }
+kbs-types = { git = "https://github.com/virtee/kbs-types.git", rev = "ac89322"}
 lazy_static = "1.4.0"
 log = "0.4.17"
 path-clean = "0.1.0"
@@ -60,6 +61,7 @@ tempfile = "3.3.0"
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
 tonic = { version = "0.8.1", optional = true }
 uuid = { version = "1.1.2", features = ["v4"] }
+reqwest = { version = "0.11", features = ["blocking"] }
 
 [build-dependencies]
 shadow-rs = "0.19.0"
