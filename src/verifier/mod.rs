@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use kbs_types::{Attestation, Tee};
 
 pub mod sample;
+pub mod cca;
 
 #[cfg(feature = "tdx-verifier")]
 pub mod tdx;
@@ -21,6 +22,16 @@ pub(crate) fn to_verifier(tee: &Tee) -> Result<Box<dyn Verifier + Send + Sync>> 
             }
         }
         Tee::Sample => Ok(Box::<sample::Sample>::default() as Box<dyn Verifier + Send + Sync>),
+        Tee::Sgx => {
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "sgx-verifier")] {
+                    Ok(Box::<sgx::SgxVerifier>::default() as Box<dyn Verifier + Send + Sync>)
+                } else {
+                    anyhow::bail!("feature `sgx-verifier` is not enabled!");
+                }
+            }
+        }
+        Tee::Cca => Ok(Box::<cca::CCA>::default() as Box<dyn Verifier + Send + Sync>),
     }
 }
 
