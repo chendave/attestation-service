@@ -17,9 +17,12 @@ pub mod tdx;
 #[cfg(feature = "sgx-verifier")]
 pub mod sgx;
 
+#[cfg(feature = "cca-verifier")]
+pub mod cca;
+
 pub(crate) fn to_verifier(tee: &Tee) -> Result<Box<dyn Verifier + Send + Sync>> {
     match tee {
-        Tee::Sev | Tee::Cca => todo!(),
+        Tee::Sev => todo!(),
         Tee::AzSnpVtpm => {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "az-snp-vtpm-verifier")] {
@@ -54,6 +57,15 @@ pub(crate) fn to_verifier(tee: &Tee) -> Result<Box<dyn Verifier + Send + Sync>> 
                     Ok(Box::<sgx::SgxVerifier>::default() as Box<dyn Verifier + Send + Sync>)
                 } else {
                     anyhow::bail!("feature `sgx-verifier` is not enabled!");
+                }
+            }
+        }
+        Tee::Cca => {
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "cca-verifier")] {
+                    Ok(Box::<cca::CCA>::default() as Box<dyn Verifier + Send + Sync>)
+                } else {
+                    anyhow::bail!("feature `cca-verifier` is not enabled!");
                 }
             }
         }
