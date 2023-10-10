@@ -6,9 +6,18 @@
 use super::*;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
+use base64::{
+    alphabet,
+    engine::{self, general_purpose},
+    Engine,
+};
 use core::result::Result::Ok;
+use ear::Ear;
+use jsonwebtoken::{self as jwt};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use sha2::{Digest, Sha384};
+use std::str;
 use veraison_apiclient::*;
 
 const VERAISON_ADDR: &str = "VERAISON_ADDR";
@@ -48,12 +57,11 @@ fn my_evidence_builder(
     Ok((token, MEDIA_TYPE.to_string()))
 }
 
-// TODO: compare the nonce with CCA challenge to avoid the replay attack, see: https://github.com/confidential-containers/attestation-service/issues/127
 #[async_trait]
 impl Verifier for CCA {
     async fn evaluate(
         &self,
-        _nonce: String,
+        nonce: String,
         attestation: &Attestation,
     ) -> Result<TeeEvidenceParsedClaim> {
         let evidence = serde_json::from_str::<CcaEvidence>(&attestation.tee_evidence)
@@ -77,16 +85,45 @@ impl Verifier for CCA {
             .with_new_session_url(api_endpoint)
             .build()?;
 
-        let nonce = Nonce::Size(32);
+        let mut hasher = Sha384::new();
+        hasher.update(&nonce);
+        hasher.update(&attestation.tee_pubkey.k_mod);
+        hasher.update(&attestation.tee_pubkey.k_exp);
+        let mut hash_of_nonce_pubkey = hasher.finalize().to_vec();
+        hash_of_nonce_pubkey.resize(64, 0);
+
+        log::info!(
+            "HASH(nonce||pubkey):\n\t{}\n",
+            hex::encode(&hash_of_nonce_pubkey)
+        );
+
         let token = evidence.token;
-        match cr.run(nonce, my_evidence_builder, token.clone()).await {
+        let n = Nonce::Value(hash_of_nonce_pubkey.clone());
+        let result = match cr.run(n, my_evidence_builder, token.clone()).await {
             Err(e) => {
                 log::error!("Error: {}", e);
-                return Err(anyhow!("Attestation failed with error: {:?}", e));
+                panic!("Attestation failed with error: {:?}", e);
             }
-            Ok(attestation_result) => {
-                log::info!("Attestation Result: {}", attestation_result)
-            }
+            Ok(attestation_result) => attestation_result,
+        };
+
+        // Get back the pub key to decrypt the ear which holds raw evidence and the nonce
+        let public_key_pem = verification_api.ear_verification_key_as_pem()?;
+        let dk = jwt::DecodingKey::from_ec_pem(public_key_pem.as_bytes()).unwrap();
+        let plain_ear = Ear::from_jwt(result.as_str(), jwt::Algorithm::ES256, &dk).unwrap();
+        println!("EAR nonce: {:?}", plain_ear.nonce);
+        println!("EAR evidence: {:?}", plain_ear.raw_evidence);
+
+        let ear_nonce = plain_ear.nonce.unwrap();
+        let nonce_byte = engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::PAD)
+            .decode(ear_nonce.to_string())
+            .unwrap();
+
+        //let s = String::from_utf8(hash_of_nonce_pubkey).expect("Found invalid UTF-8");
+        if hash_of_nonce_pubkey != nonce_byte {
+            return Err(anyhow!(
+                "HASH(nonce||pubkey) is different from that in CCA token"
+            ));
         }
 
         // NOTE: The tcb returned is actually an empty `Evidence`, the code here is just a show case the parse of the CCA token
