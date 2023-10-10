@@ -5,7 +5,7 @@ edition = "2021"
 
 [features]
 default = [ "rvps-native", "all-verifier" ]
-all-verifier = [ "tdx-verifier", "sgx-verifier", "snp-verifier", "az-snp-vtpm-verifier", "csv-verifier", "cca-verifier" ]
+all-verifier = [ "tdx-verifier", "sgx-verifier", "snp-verifier", "csv-verifier", "cca-verifier" ]
 tdx-verifier = [ "eventlog-rs", "scroll", "sgx-dcap-quoteverify-rs" ]
 sgx-verifier = [ "scroll", "sgx-dcap-quoteverify-rs" ]
 az-snp-vtpm-verifier = [ "az-snp-vtpm", "sev" ]
@@ -60,7 +60,7 @@ time = { version = "0.3.23", features = ["std"] }
 tokio.workspace = true
 tonic = { workspace = true, optional = true }
 uuid = { version = "1.1.2", features = ["v4"] }
-veraison-apiclient = { git = "https://github.com/chendave/rust-apiclient", branch = "token", optional = true }
+veraison-apiclient = { git = "https://github.com/chendave/rust-apiclient", branch = "debug", optional = true }
 ear = { git = "https://github.com/chendave/rust-ear", branch = "test" }
 x509-parser = { version = "0.14.0", optional = true }
 jsonwebtoken = "8"

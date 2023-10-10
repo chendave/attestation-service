@@ -92,12 +92,14 @@ impl Verifier for CCA {
         let mut hash_of_nonce_pubkey = hasher.finalize().to_vec();
         hash_of_nonce_pubkey.resize(64, 0);
 
+        log::info!("nonce before the encode: {:?}\n", hash_of_nonce_pubkey);
         log::info!(
             "HASH(nonce||pubkey):\n\t{}\n",
             hex::encode(&hash_of_nonce_pubkey)
         );
 
         let token = evidence.token;
+        log::info!("nonce after the log of hash encode: {:?}\n", hash_of_nonce_pubkey);
         let n = Nonce::Value(hash_of_nonce_pubkey.clone());
         let result = match cr.run(n, my_evidence_builder, token.clone()).await {
             Err(e) => {
