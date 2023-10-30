@@ -123,6 +123,7 @@ impl AttestationService {
 
         let flattened_claims = flatten_claims(tee.clone(), &claims_from_tee_evidence)?;
         let tcb = serde_json::to_string(&flattened_claims)?;
+        log::info!("we have the tcp like this now: {:?}", tcb);
         let reference_data_map = self
             .get_reference_data(&tcb)
             .await
